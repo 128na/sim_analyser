@@ -1,5 +1,5 @@
 <?php
-class Sim_Analyzer {
+class Sim_Analyser {
     private $app_name = 'Simutrans save data analyser';
     private $app_version = '1.1.1';
     private $reader;

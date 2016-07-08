@@ -7,7 +7,7 @@ require_once 'Sim_Analyser.php';
 
 $file = Args::get('-f');
 if (is_null($file)) {
-    echo "sim_analyzer -f file.sve -o output.json\n";
+    echo "sim_analsser -f file.sve -o output.json\n";
     exit;
 }
 
@@ -23,7 +23,7 @@ if (Args::has('--zipped')) {
 
 $r = new Sim_Analyser($file);
 
-Log::info($r->get_app_version(), true);
+Log::info($r->get_app(), true);
 
 $r->execute();
 
