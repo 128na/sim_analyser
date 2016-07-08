@@ -1,4 +1,4 @@
-# Simutrans save data analyzer
+# Simutrans save data analyser
 
 ## Description
 Simutransのセーブデータから路線情報を取得するCLIツールです。
@@ -11,6 +11,6 @@ Simutransのセーブデータから路線情報を取得するCLIツールで�
 
 ## Usage
 
-sim_analyzer -f file.sve -o output.json
+sim_analyser -f file.sve -o output.json
 
 
