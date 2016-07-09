@@ -14,9 +14,7 @@ class Sim_Analyser {
         'narrow',
     ];
 
-
     private $reader;
-
     private $version = null;
     private $pak = null;
     private $map_no = 0;
@@ -30,15 +28,14 @@ class Sim_Analyser {
     //planquadrat_t 要素の個数
     private $planquadrat_count = 0;
 
+    /**
+     * Sim_Analyser constructor.
+     * @param string $path input file path
+     */
     public function __construct($path) {
         try {
             $this->reader = new XMLReader();
             $this->reader->open($path);
-
-            if (!$this->reader->isValid()){
-                Log::error( 'Cannot read file! Did you saved the file as "XML" format?' , true);
-                exit;
-            }
         }
         catch (Exception $e) {
             Log::error( 'Cannot open file! : '. $e->getMessage() , true);
@@ -46,6 +43,9 @@ class Sim_Analyser {
         }
     }
 
+    /**
+     * execute analyser
+     */
     public function execute() {
         $detect_simutrans = false;
         while ($this->read()) {
@@ -80,6 +80,11 @@ class Sim_Analyser {
                 }
             }
         }
+
+        if (!$detect_simutrans) {
+            Log::error( 'Cannot read file! Did you saved the file as "XML" format?' , true);
+            exit;
+        }
     }
 
     /**
@@ -109,7 +114,6 @@ class Sim_Analyser {
         $this->set_map_no($this->trim($lines[2]));
         $this->set_map_tiles( $this->get_map_x() * $this->get_map_y());
     }
-
 
     /**
      * 駅名とその駅名が記載されている3次元座標を取得する
@@ -161,6 +165,11 @@ class Sim_Analyser {
         }
     }
 
+    /**
+     * XML文字列から座標を取得する
+     * @param string $str XML string
+     * @return array [x => 0, y => 0, z => 0]
+     */
     private function get_coordinates_from_str($str) {
         $result = [];
         preg_match_all('/<koord3d>([\s\S]+?)<\/koord3d>/', $str, $coordinates);
@@ -179,6 +188,11 @@ class Sim_Analyser {
         return $result;
     }
 
+    /**
+     * 座標配列からマッチする駅を探す
+     * @param $coordinates 座標配列
+     * @return bool 見つかったか
+     */
     private function resolve_relations($coordinates) {
         foreach ($coordinates as $coordinate) {
             if($station = $this->get_station_by_coordinate($coordinate)) {
@@ -189,6 +203,9 @@ class Sim_Analyser {
         }
     }
 
+    /**
+     * プレーヤーを取得する
+     */
     private function read_players() {
 
         //way_type取得用バッファ
@@ -214,6 +231,11 @@ class Sim_Analyser {
             }
         }
     }
+
+    /**
+     * 路線情報を読み取る
+     * @param int $way_type way_type_id
+     */
     private function read_line($way_type) {
         if($lines_str = $this->get_children_str()){
 
@@ -234,19 +256,20 @@ class Sim_Analyser {
     }
 
     /**
-     * @return array
+     * XML子要素を配列で返す
+     * @return array XML strin garray
      */
     private function get_children_arr() {
         return explode("\n", $this->get_children_str());
     }
 
     /**
-     * @return string
+     * XML子要素の文字列を返す
+     * @return string XML string
      */
     private function get_children_str() {
         return $this->reader->readInnerXML();
     }
-
 
     /**
      * n番目からｘｙ座標を求める
@@ -262,17 +285,6 @@ class Sim_Analyser {
         return ['x' => $x, 'y' => $y];
     }
 
-     /**
-     * x,y座標から何番目か求める
-     * @param $x
-     * @param $y
-     * @return int n
-     */
-    private function xy_to_n($x, $y){
-        return $x + $y * $this->get('width');
-    }
-
-
     /**
      * 文字列を美しくトリムる
      * @param string $str トリムる文字列
@@ -287,43 +299,69 @@ class Sim_Analyser {
         return $str;
     }
 
-
+    /**
+     * 次の行のXMLデータを読み取る
+     * @return bool 読み取りの成否
+     */
     private function read() {
-        return $this->reader->read();
+        return @$this->reader->read();
     }
+
+    /**
+     * XML要素の値を読み取る
+     * @return string
+     */
     private function read_value() {
         return $this->reader->value;
     }
 
-    private function skip($count = 1) {
-        for($i=0;$i<$count;$i++) $this->reader->next();
-    }
-
+    /**
+     * XMLReader インスタンスを返す
+     * @return XMLReader
+     */
     private function get_reader() {
         return $this->reader;
     }
 
+    /**
+     * 現在のノードが要素か
+     * @return bool
+     */
     private function is_element() {
         return $this->reader->nodeType === XMLReader::ELEMENT;
     }
 
-    private function is_text() {
-        return $this->reader->nodeType === XMLReader::TEXT;
-    }
-
+    /**
+     * 現在のノードがCDATAか
+     * @return bool
+     */
     private function is_cdata() {
         return $this->reader->nodeType === XMLReader::CDATA;
     }
 
+    /**
+     * 指定された名前の要素の開始か
+     * @param string $name element name
+     * @return bool
+     */
     private function is_name_open($name) {
         return ($this->reader->nodeType !== XMLReader::END_ELEMENT) && ($this->reader->localName === $name);
     }
 
+    /**
+     * 指定された名前の要素の終了か
+     * @param string $name element name
+     * @return bool
+     */
     private function is_name_close($name) {
         return ($this->reader->nodeType === XMLReader::END_ELEMENT) && ($this->reader->localName === $name);
     }
 
-    private function get_data_by_array() {
+    /**
+     * 取得データを配列でまとめて返す
+     * @return array
+     */
+    public function get_data_by_array() {
         $app = [
             'author'  => '128Na',
             'web'     => 'http://simutrans128.blog26.fc2.com',
@@ -347,9 +385,19 @@ class Sim_Analyser {
             'way_types'   => $this->get_way_types(),
         ];
     }
+
+    /**
+     * 取得データをjson文字列でまとめて返す
+     * @return string
+     */
     public function get_data_by_json() {
         return json_encode($this->get_data_by_array());
     }
+
+    /**
+     * 取得データをcsv文字列でまとめて返す
+    @return string
+     */
     public function get_data_by_csv() {
         $result = ["generate by {$this->get_app()}"];
         $result[] = "player,way_type,line,stations";
@@ -365,6 +413,11 @@ class Sim_Analyser {
         return implode("\n", $result);
     }
 
+    /**
+     * 座標配列を駅名を探し、駅名の配列を返す。
+     * @param array $coordinates
+     * @return array
+     */
     private function find_stations_by_coordinates($coordinates) {
         $result = [];
         foreach ($coordinates as $coordinate) {
@@ -373,10 +426,11 @@ class Sim_Analyser {
         }
         return $result;
     }
-    public function __toString(){
-        return $this->get_data_by_json();
-    }
 
+    /**
+     * アプリ情報を返す
+     * @return string
+     */
     public function get_app(){
         return static::APP_NAME .' ver'. static::APP_VERSION;
     }
