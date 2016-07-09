@@ -1,7 +1,7 @@
 <?php
 class Sim_Analyser {
     const APP_NAME = 'Simutrans save data analyser';
-    const APP_VERSION = '1.1.1';
+    const APP_VERSION = '1.1.2';
     const WAY_TYPES = [
         'unknown',
         'road',
