@@ -1,7 +1,7 @@
 <?php
 class Sim_Analyser {
     const APP_NAME = 'Simutrans save data analyser';
-    const APP_VERSION = '1.1.2';
+    const APP_VERSION = '1.2.0';
     const WAY_TYPES = [
         'unknown',
         'road',
@@ -31,8 +31,19 @@ class Sim_Analyser {
     private $planquadrat_count = 0;
 
     public function __construct($path) {
-        $this->reader = new XMLReader();
-        $this->reader->open($path);
+        try {
+            $this->reader = new XMLReader();
+            $this->reader->open($path);
+
+            if (!$this->reader->isValid()){
+                Log::error( 'Cannot read file! Did you saved the file as "XML" format?' , true);
+                exit;
+            }
+        }
+        catch (Exception $e) {
+            Log::error( 'Cannot open file! : '. $e->getMessage() , true);
+            exit;
+        }
     }
 
     public function execute() {
@@ -312,7 +323,7 @@ class Sim_Analyser {
         return ($this->reader->nodeType === XMLReader::END_ELEMENT) && ($this->reader->localName === $name);
     }
 
-    public function get_data_by_json() {
+    private function get_data_by_array() {
         $app = [
             'author'  => '128Na',
             'web'     => 'http://simutrans128.blog26.fc2.com',
@@ -327,16 +338,41 @@ class Sim_Analyser {
             'map_no'  => $this->get_map_no(),
         ];
 
-        return json_encode([
+        return [
             'application' => $app,
             'info'        => $info,
             'players'     => $this->get_players(),
             'stations'    => $this->get_stations(),
             'lines'       => $this->get_lines(),
             'way_types'   => $this->get_way_types(),
-        ]);
+        ];
+    }
+    public function get_data_by_json() {
+        return json_encode($this->get_data_by_array());
+    }
+    public function get_data_by_csv() {
+        $result = ["generate by {$this->get_app()}"];
+        $result[] = "player,way_type,line,stations";
+
+        foreach ($this->get_lines() as $line) {
+            $player = $this->get_player_by_id($line['player_id']);
+            $way_type = $this->get_way_type_by_id($line['way_type_id']);
+            $name = $line['name'];
+            $stations = implode(',',$this->find_stations_by_coordinates($line['coordinates']));
+
+            $result[] = "{$player},{$way_type},{$name},{$stations}";
+        }
+        return implode("\n", $result);
     }
 
+    private function find_stations_by_coordinates($coordinates) {
+        $result = [];
+        foreach ($coordinates as $coordinate) {
+            $sta = $this->get_station_by_coordinate($coordinate);
+            $result[] = $sta ? $sta['name'] : 'no-name';
+        }
+        return $result;
+    }
     public function __toString(){
         return $this->get_data_by_json();
     }
@@ -346,6 +382,7 @@ class Sim_Analyser {
     }
 
     public function get_way_types(){return static::WAY_TYPES;}
+    public function get_way_type_by_id($id){return static::WAY_TYPES[$id];}
     public function get_version(){return $this->version;}
     public function get_pak(){return $this->pak;}
     public function get_map_no(){return $this->map_no;}
@@ -369,6 +406,7 @@ class Sim_Analyser {
     }
     public function get_lines(){return $this->lines;}
     public function get_players(){return $this->players;}
+    public function get_player_by_id($id){return $this->players[$id];}
 
 
     public function set_map_x($x){$this->map_x = intval($x);}
