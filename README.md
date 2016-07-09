@@ -1,8 +1,7 @@
-# Simutrans save data analyser
+# Simutrans save data analyzer
 
 ## Description
 Simutransのセーブデータから路線情報を取得するCLIツールです。
-動作確認は120.1～のセーブデータのみです。
 
 ## Format
 - XML
@@ -11,10 +10,18 @@ Simutransのセーブデータから路線情報を取得するCLIツールで�
 - PHP 5.4
 
 ## Usage
-php sim_analyser.phar -f file.sve -o output.json
+default output type is jsonp file.
+```
+sim_analyzer.phar -f file.sve [-o output_file [--as-json]]
+```
 
+### simply
+```
+php sim_analyzer.phar -f file.sve
+```
+and open viewer.html
 
-# TODO
-
-bootstrap
-add way_type info
+### export as json file
+```
+php sim_analyzer.phar -f file.sve -o output_file.json --as-json
+```
