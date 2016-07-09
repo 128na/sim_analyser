@@ -14,3 +14,7 @@ Simutransのセーブデータから路線情報を取得するCLIツールで�
 php sim_analyser.phar -f file.sve -o output.json
 
 
+# TODO
+
+bootstrap
+add way_type info

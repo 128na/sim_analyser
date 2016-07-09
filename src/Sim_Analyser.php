@@ -1,9 +1,21 @@
 <?php
 class Sim_Analyser {
-    private $app_name = 'Simutrans save data analyser';
-    private $app_version = '1.1.1';
+    const APP_NAME = 'Simutrans save data analyser';
+    const APP_VERSION = '1.1.1';
+    const WAY_TYPES = [
+        'unknown',
+        'road',
+        'track',
+        'ship',
+        'air',
+        'mono',
+        'tram',
+        'maglev',
+        'narrow',
+    ];
+
+
     private $reader;
-    private $data;
 
     private $version = null;
     private $pak = null;
@@ -27,7 +39,7 @@ class Sim_Analyser {
         $detect_simutrans = false;
         while ($this->read()) {
             if ($this->is_element()) {
-                if (!$detect_simutrans && $this->is_name('Simutrans')){
+                if (!$detect_simutrans && $this->is_name_open('Simutrans')){
                     Log::info('Reading header... ', true);
 
                     $detect_simutrans = $this->read_simuheader();
@@ -36,7 +48,7 @@ class Sim_Analyser {
                     Log::info('version -> '.$this->get_version(), true);
                 }
                 if ($detect_simutrans) {
-                    if ($this->is_name('einstellungen_t')) {
+                    if ($this->is_name_open('einstellungen_t')) {
                         Log::info('Reading map info... ', true);
 
                         $this->read_info();
@@ -44,14 +56,14 @@ class Sim_Analyser {
                         Log::info('map size -> '.$this->get_map_x().'x'.$this->get_map_y(), true);
                         Log::info('map No. -> '.$this->get_map_no(), true);
                     }
-                    if ($this->is_name('planquadrat_t')) {
+                    if ($this->is_name_open('planquadrat_t')) {
 
                         $this->read_stations();
                     }
-                    if ($this->is_name('haltestelle_t')) {
+                    if ($this->is_name_open('haltestelle_t')) {
                         $this->read_relations();
                     }
-                    if ($this->is_name('spieler_t')) {
+                    if ($this->is_name_open('spieler_t')) {
                         $this->read_players();
                     }
                 }
@@ -167,23 +179,31 @@ class Sim_Analyser {
     }
 
     private function read_players() {
+
+        //way_type取得用バッファ
+        $prev_text = '';
+
         $end_read_line = false;
         while($this->read()){
-            if ($this->is_name('simline_t')){
-                $this->read_line();
+            if ($this->is_name_open('simline_t')){
+                $this->read_line(intval($prev_text));
             }
-            if ($this->is_name_close('simlinemgmt_t')) {
+            elseif ($this->is_name_close('simlinemgmt_t')) {
                 $end_read_line = true;
             }
-            if ($end_read_line && $this->is_cdata()) {
+            elseif ($end_read_line && $this->is_cdata()) {
                 $this->add_player($this->read_value());
             }
-            if ($this->is_name_close('spieler_t')) {
+            elseif ($this->is_name_close('spieler_t')) {
                 return;
+            }
+
+            if($this->is_element()) {
+                $prev_text = $this->get_reader()->readString();
             }
         }
     }
-    private function read_line() {
+    private function read_line($way_type) {
         if($lines_str = $this->get_children_str()){
 
             $lines = explode("\n", $lines_str);
@@ -192,7 +212,8 @@ class Sim_Analyser {
                 $this->add_line([
                     'name'        => $name,
                     'id'          => intval($this->trim($lines[2])),
-                    'player'      => count($this->players),
+                    'way_type_id' => $way_type,
+                    'player_id'   => count($this->players),
                     'coordinates' => $this->get_coordinates_from_str($lines_str),
                 ]);
                 Log::info('Line found -> '.$name, true);
@@ -283,8 +304,8 @@ class Sim_Analyser {
         return $this->reader->nodeType === XMLReader::CDATA;
     }
 
-    private function is_name($name) {
-        return $this->reader->localName === $name;
+    private function is_name_open($name) {
+        return ($this->reader->nodeType !== XMLReader::END_ELEMENT) && ($this->reader->localName === $name);
     }
 
     private function is_name_close($name) {
@@ -312,6 +333,7 @@ class Sim_Analyser {
             'players'     => $this->get_players(),
             'stations'    => $this->get_stations(),
             'lines'       => $this->get_lines(),
+            'way_types'   => $this->get_way_types(),
         ]);
     }
 
@@ -320,10 +342,10 @@ class Sim_Analyser {
     }
 
     public function get_app(){
-        return $this->app_name . $this->app_version;
+        return static::APP_NAME .' ver'. static::APP_VERSION;
     }
 
-
+    public function get_way_types(){return static::WAY_TYPES;}
     public function get_version(){return $this->version;}
     public function get_pak(){return $this->pak;}
     public function get_map_no(){return $this->map_no;}
