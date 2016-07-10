@@ -9,7 +9,7 @@
  */
 class Sim_Analyser {
     const APP_NAME = 'Simutrans save data analyser';
-    const APP_VERSION = '1.2.0';
+    const APP_VERSION = '1.2.1';
     const WAY_TYPES = [
         'unknown',
         'road',
