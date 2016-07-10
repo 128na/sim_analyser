@@ -57,6 +57,6 @@ class Log {
     }
     private static function time() {
         $time = new DateTime();
-        return $time->format('Y-M-d-Hiu');
+        return $time->format('Y-M-d-His');
     }
 }

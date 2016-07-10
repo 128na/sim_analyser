@@ -9,7 +9,7 @@
  */
 class Sim_Analyser {
     const APP_NAME = 'Simutrans save data analyser';
-    const APP_VERSION = '1.2.1';
+    const APP_VERSION = '1.3.0';
     const WAY_TYPES = [
         'unknown',
         'road',
@@ -204,6 +204,7 @@ class Sim_Analyser {
     private function resolve_relations($coordinates) {
         foreach ($coordinates as $coordinate) {
             if($station = $this->get_station_by_coordinate($coordinate)) {
+                Log::info('resolved station ->'.$station['name'], true);
                 $station['coordinates'] = $coordinates;
                 $this->set_station_by_coordinate($coordinate, $station);
                 return true;
