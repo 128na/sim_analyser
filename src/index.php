@@ -11,12 +11,15 @@ $file = Args::get('-f');
 if (is_null($file)) {
     $msg = <<<EOD
 Usage
- php sim_analyser.phar -f file.sve [-o output [--as-json|--as-csv]]
+ php sim_analyser.phar -f file.sve [-o output_file [--xml-zipped|--xml-bz2] [--as-json|--as-csv] [--sjis]]
 
 I/O setting
  -f file.sve\t: input filename XML format only!
  -o output\t: output filename (default name is result.xxx. Extension is depends on export format. ).
 
+import format (default xml)
+ --xml-zipped\t: import from zip compressed xml.
+ --xml-bz2\t: import from bz2 compressed xml.
 export format (default jsonp)
  --as-json\t: export as json format.
  --as-csv\t: export as csv format.
