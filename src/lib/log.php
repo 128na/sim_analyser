@@ -1,5 +1,11 @@
 <?php
-
+/**
+ * logger
+ * @author  128Na
+ * @version 2016.Jul.10
+ * @since   PHP5.4
+ * @license WTFPL (http://www.wtfpl.net/txt/copying/)
+ */
 class Log {
     public static $filename;
     private static $init_called = false;
@@ -51,6 +57,6 @@ class Log {
     }
     private static function time() {
         $time = new DateTime();
-        return $time->format('Y-M-d-His');
+        return $time->format('Y-M-d-Hiu');
     }
 }

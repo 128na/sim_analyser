@@ -8,7 +8,23 @@ require_once 'Sim_Analyser.php';
 //入力ファイルが指定されていなければあきらめる
 $file = Args::get('-f');
 if (is_null($file)) {
-    echo "sim_analyser.phar -f file.sve [-o output [--as-json|--as-csv]]\n";
+    $msg = <<<EOD
+Usage
+ php sim_analyser.phar -f file.sve [-o output [--as-json|--as-csv]]
+
+I/O setting
+ -f file.sve\t: input filename XML format only!
+ -o output\t: output filename (default name is result.xxx. Extension is depends on export format. ).
+
+export format (default jsonp)
+ --as-json\t: export as json format.
+ --as-csv\t: export as csv format.
+
+charset (default:UTF-8)
+ --sjis\t\t: convert text to sjis.
+
+EOD;
+    echo $msg;
     exit;
 }
 

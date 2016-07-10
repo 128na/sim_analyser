@@ -36,3 +36,6 @@ php sim_analyser.phar -f file.sve --as-csv
 ```
 php sim_analyser.phar -f file.sve --as-csv --sjis
 ```
+
+## License
+WTFPL (http://www.wtfpl.net/txt/copying/)

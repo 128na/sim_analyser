@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * Sim_Analyser
+ * @author  128Na
+ * @version 2016.Jul.10
+ * @since   PHP5.6
+ * @license WTFPL (http://www.wtfpl.net/txt/copying/)
+ */
 class Sim_Analyser {
     const APP_NAME = 'Simutrans save data analyser';
     const APP_VERSION = '1.2.0';
