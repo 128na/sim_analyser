@@ -84,7 +84,7 @@ else {
 
 // delete tmp file
 if (file_exists($tmp_file)){
-    if (unlink($tmp_file)){
+    if (@unlink($tmp_file)){
         Log::info("remove temporary file");
     }
     else {

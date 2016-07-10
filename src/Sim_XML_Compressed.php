@@ -38,8 +38,13 @@ class Sim_XML_Zipped {
         }
     }
 
+    /**
+     * 開けたら閉めるなのです
+     */
     public function __destruct(){
-        bzclose( $this->file_from);
+        Log::info('close source file');
+        gzclose( $this->file_from);
+        Log::info('close tmp file');
         fclose( $this->file_to);
     }
 
@@ -83,8 +88,13 @@ class Sim_XML_Bz2 {
         }
     }
 
+    /**
+     * 開けたら閉めるなのです
+     */
     public function __destruct(){
+        Log::info('close source file');
         bzclose( $this->file_from);
+        Log::info('close tmp file');
         fclose( $this->file_to);
     }
 

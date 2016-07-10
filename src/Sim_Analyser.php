@@ -9,7 +9,7 @@
  */
 class Sim_Analyser {
     const APP_NAME = 'Simutrans save data analyser';
-    const APP_VERSION = '1.3.0';
+    const APP_VERSION = '1.3.1';
     const WAY_TYPES = [
         'unknown',
         'road',
@@ -49,6 +49,14 @@ class Sim_Analyser {
             Log::error( 'Cannot open file! : '. $e->getMessage() , true);
             exit;
         }
+    }
+
+    /**
+     * 開けたら閉めるなのです
+     */
+    public function close() {
+        Log::info('close XML Reader');
+        $this->reader->close();
     }
 
     /**
@@ -93,6 +101,7 @@ class Sim_Analyser {
             Log::error( 'Cannot read file! Did you saved the file as "XML" format?' , true);
             exit;
         }
+        $this->close();
     }
 
     /**
