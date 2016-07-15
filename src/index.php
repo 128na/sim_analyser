@@ -3,7 +3,7 @@ define('DS', DIRECTORY_SEPARATOR);
 
 require_once 'lib/args.php';
 require_once 'lib/log.php';
-require_once 'Sim_XML_Compressed.php';
+require_once 'Sve_Reader.php';
 require_once 'Sim_Analyser.php';
 
 //入力ファイルが指定されていなければあきらめる
@@ -11,15 +11,12 @@ $file = Args::get('-f');
 if (is_null($file)) {
     $msg = <<<EOD
 Usage
- php sim_analyser.phar -f file.sve [-o output_file [--xml-zipped|--xml-bz2] [--as-json|--as-csv] [--sjis]]
+ php sim_analyser.phar -f file.sve [-o output_file [--as-json|--as-csv] [--sjis]]
 
 I/O setting
- -f file.sve\t: input filename XML format only!
+ -f file.sve\t: input filename. Support format : xml, xml_zipped, xml_bz2.
  -o output\t: output filename (default name is result.xxx. Extension is depends on export format. ).
 
-import format (default xml)
- --xml-zipped\t: import from zip compressed xml.
- --xml-bz2\t: import from bz2 compressed xml.
 export format (default jsonp)
  --as-json\t: export as json format.
  --as-csv\t: export as csv format.
@@ -31,22 +28,6 @@ EOD;
     echo $msg;
     exit;
 }
-
-// extract zip, bz2 compressed file
-$tmp_file = '__sve.tmp';
-if (Args::has('--xml-zipped')) {
-    Log::info("extract zip compressed file ", true);
-    Sim_XML_Zipped::load($file)
-        ->extract($tmp_file);
-    $file = $tmp_file;
-}
-elseif (Args::has('--xml-bz2')) {
-    Log::info("extract bz2 compressed file ", true);
-    Sim_XML_Bz2::load($file)
-        ->extract($tmp_file);
-    $file = $tmp_file;
-}
-
 
 
 $analyser = new Sim_Analyser($file);
@@ -72,6 +53,7 @@ else {  // jsonp
     $output = $output ?: 'result.jsonp';
 }
 
+
 if (Args::has('--sjis')) {    // convert to sjis
     Log::info("data convert to SJIS from UTF-8", true);
     $data = mb_convert_encoding($data, 'SJIS', 'UTF-8');
@@ -84,13 +66,3 @@ else {
     Log::error("result cannot saved -> {$output}");
 }
 
-
-// delete tmp file
-if (file_exists($tmp_file)){
-    if (@unlink($tmp_file)){
-        Log::info("remove temporary file");
-    }
-    else {
-        Log::error("failed remove temporary file!");
-    }
-}

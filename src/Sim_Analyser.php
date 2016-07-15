@@ -3,13 +3,13 @@
 /**
  * Sim_Analyser
  * @author  128Na
- * @version 2016.Jul.10
+ * @version 2016.Jul.15
  * @since   PHP5.6
  * @license WTFPL (http://www.wtfpl.net/txt/copying/)
  */
-class Sim_Analyser {
+class Sim_Analyser extends Sve_Reader{
     const APP_NAME = 'Simutrans save data analyser';
-    const APP_VERSION = '1.3.1';
+    const APP_VERSION = '1.3.2';
     const WAY_TYPES = [
         'unknown',
         'road',
@@ -22,7 +22,6 @@ class Sim_Analyser {
         'narrow',
     ];
 
-    private $reader;
     private $version = null;
     private $pak = null;
     private $map_no = 0;
@@ -40,15 +39,8 @@ class Sim_Analyser {
      * Sim_Analyser constructor.
      * @param string $path input file path
      */
-    public function __construct($path) {
-        try {
-            $this->reader = new XMLReader();
-            $this->reader->open($path);
-        }
-        catch (Exception $e) {
-            Log::error( 'Cannot open file! : '. $e->getMessage() , true);
-            exit;
-        }
+    public function __construct($filename) {
+        parent::__construct($filename);
     }
 
     /**
@@ -56,7 +48,7 @@ class Sim_Analyser {
      */
     public function close() {
         Log::info('close XML Reader');
-        $this->reader->close();
+        parent::close_file();
     }
 
     /**
@@ -109,11 +101,10 @@ class Sim_Analyser {
      * @return bool 適切なsimutrans xml save formatか
      */
     private function read_simuheader() {
-        $reader = $this->get_reader();
-        $version = $reader->getAttribute("version");
+        $version = $this->getAttribute("version");
         if ($version) {
             $this->set_version($version);
-            $this->set_pak($reader->getAttribute("pak"));
+            $this->set_pak($this->getAttribute("pak"));
             //必要ならバージョンチェックして解析可能ならtrueにする
             return true;
         }
@@ -175,7 +166,7 @@ class Sim_Analyser {
      * 各駅の保有座標配列を取得し、駅情報へ組み込む
      */
     private function read_relations() {
-        $coordinates = $this->get_coordinates_from_str($this->reader->readInnerXML());
+        $coordinates = $this->get_coordinates_from_str($this->get_children_str());
 
         if(!$this->resolve_relations($coordinates)){
             Log::error('cannot resolved!');
@@ -207,13 +198,13 @@ class Sim_Analyser {
 
     /**
      * 座標配列からマッチする駅を探す
-     * @param $coordinates 座標配列
+     * @param array $coordinates 座標配列
      * @return bool 見つかったか
      */
     private function resolve_relations($coordinates) {
         foreach ($coordinates as $coordinate) {
             if($station = $this->get_station_by_coordinate($coordinate)) {
-                Log::info('resolved station ->'.$station['name'], true);
+                Log::info('station relation resolved. ->'.$station['name'], true);
                 $station['coordinates'] = $coordinates;
                 $this->set_station_by_coordinate($coordinate, $station);
                 return true;
@@ -273,21 +264,7 @@ class Sim_Analyser {
 
     }
 
-    /**
-     * XML子要素を配列で返す
-     * @return array XML strin garray
-     */
-    private function get_children_arr() {
-        return explode("\n", $this->get_children_str());
-    }
 
-    /**
-     * XML子要素の文字列を返す
-     * @return string XML string
-     */
-    private function get_children_str() {
-        return $this->reader->readInnerXML();
-    }
 
     /**
      * n番目からｘｙ座標を求める
@@ -317,63 +294,6 @@ class Sim_Analyser {
         return $str;
     }
 
-    /**
-     * 次の行のXMLデータを読み取る
-     * @return bool 読み取りの成否
-     */
-    private function read() {
-        return @$this->reader->read();
-    }
-
-    /**
-     * XML要素の値を読み取る
-     * @return string
-     */
-    private function read_value() {
-        return $this->reader->value;
-    }
-
-    /**
-     * XMLReader インスタンスを返す
-     * @return XMLReader
-     */
-    private function get_reader() {
-        return $this->reader;
-    }
-
-    /**
-     * 現在のノードが要素か
-     * @return bool
-     */
-    private function is_element() {
-        return $this->reader->nodeType === XMLReader::ELEMENT;
-    }
-
-    /**
-     * 現在のノードがCDATAか
-     * @return bool
-     */
-    private function is_cdata() {
-        return $this->reader->nodeType === XMLReader::CDATA;
-    }
-
-    /**
-     * 指定された名前の要素の開始か
-     * @param string $name element name
-     * @return bool
-     */
-    private function is_name_open($name) {
-        return ($this->reader->nodeType !== XMLReader::END_ELEMENT) && ($this->reader->localName === $name);
-    }
-
-    /**
-     * 指定された名前の要素の終了か
-     * @param string $name element name
-     * @return bool
-     */
-    private function is_name_close($name) {
-        return ($this->reader->nodeType === XMLReader::END_ELEMENT) && ($this->reader->localName === $name);
-    }
 
     /**
      * 取得データを配列でまとめて返す
@@ -384,7 +304,7 @@ class Sim_Analyser {
             'author'  => '128Na',
             'web'     => 'http://simutrans128.blog26.fc2.com',
             'version' => $this->get_app(),
-            'source'  => 'comming soon',
+            'source'  => 'https://github.com/128na/sim_analyser',
         ];
 
         $info = [
