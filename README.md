@@ -14,22 +14,13 @@ Simutransのセーブデータから路線情報を取得するCLIツールで�
 ## Usage
 default output type is jsonp file.
 ```
-php sim_analyser.phar -f file.sve [-o output_file [--xml-zipped|--xml-bz2] [--as-json|--as-csv] [--sjis]]
+php sim_analyser.phar -f file.sve [-o output_file [--as-json|--as-csv] [--sjis]]
 ```
 You can see analysed information via viewer.html
 
 ### simply
-- from XML format
 ```
 php sim_analyser.phar -f file.sve
-```
-- from XML zipped format
-```
-php sim_analyser.phar -f file.sve --xml-zipped
-```
-- from XML bz2 format
-```
-php sim_analyser.phar -f file.sve --xml-bz2
 ```
 
 ### set export filename
