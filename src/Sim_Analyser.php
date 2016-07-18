@@ -1,6 +1,5 @@
 <?php
-
-/**
+    /**
  * Sim_Analyser
  * @author  128Na
  * @version 2016.Jul.15
@@ -9,46 +8,25 @@
  */
 class Sim_Analyser extends Sve_Reader{
     const APP_NAME = 'Simutrans save data analyser';
-    const APP_VERSION = '1.3.2';
-    const WAY_TYPES = [
-        'unknown',
-        'road',
-        'track',
-        'ship',
-        'air',
-        'mono',
-        'tram',
-        'maglev',
-        'narrow',
-    ];
+    const APP_VERSION = '1.3.3';
 
-    private $version = null;
-    private $pak = null;
-    private $map_no = 0;
-    private $map_x = 0;
-    private $map_y = 0;
-    private $map_tiles = 0;
-    private $players = [];
-    private $lines = [];
-    private $stations = [];
+    const SUPPORT_SVE_VERSION_HIGHER = [
+        0,
+        120,
+        0,
+    ];
 
     //planquadrat_t 要素の個数
     private $planquadrat_count = 0;
 
     /**
      * Sim_Analyser constructor.
-     * @param string $path input file path
+     * @param string $filename
+     * @internal param string $path input file path
      */
     public function __construct($filename) {
+        /** @var string $filename */
         parent::__construct($filename);
-    }
-
-    /**
-     * 開けたら閉めるなのです
-     */
-    public function close() {
-        Log::info('close XML Reader');
-        parent::close_file();
     }
 
     /**
@@ -59,24 +37,13 @@ class Sim_Analyser extends Sve_Reader{
         while ($this->read()) {
             if ($this->is_element()) {
                 if (!$detect_simutrans && $this->is_name_open('Simutrans')){
-                    Log::info('Reading header... ', true);
-
-                    $detect_simutrans = $this->read_simuheader();
-
-                    Log::info('pak -> '.$this->get_pak(), true);
-                    Log::info('version -> '.$this->get_version(), true);
+                    $detect_simutrans = $this->read_header();
                 }
                 if ($detect_simutrans) {
                     if ($this->is_name_open('einstellungen_t')) {
-                        Log::info('Reading map info... ', true);
-
                         $this->read_info();
-
-                        Log::info('map size -> '.$this->get_map_x().'x'.$this->get_map_y(), true);
-                        Log::info('map No. -> '.$this->get_map_no(), true);
                     }
                     if ($this->is_name_open('planquadrat_t')) {
-
                         $this->read_stations();
                     }
                     if ($this->is_name_open('haltestelle_t')) {
@@ -90,25 +57,33 @@ class Sim_Analyser extends Sve_Reader{
         }
 
         if (!$detect_simutrans) {
-            Log::error( 'Cannot read file! Did you saved the file as "XML" format?' , true);
-            exit;
+            throw new SimutransElementNotFoundException('Cannot read file! Did you saved the file as "XML" format?');
         }
+
         $this->close();
+        return true;
     }
 
     /**
      * バージョンとpakセット名を取得する
-     * @return bool 適切なsimutrans xml save formatか
      */
-    private function read_simuheader() {
+    private function read_header() {
         $version = $this->getAttribute("version");
+        //対応バージョンかチェック
         if ($version) {
-            $this->set_version($version);
-            $this->set_pak($this->getAttribute("pak"));
-            //必要ならバージョンチェックして解析可能ならtrueにする
-            return true;
+            if($this->check_version($version)){
+                $this->set_version($version);
+                $this->set_pak($this->getAttribute("pak"));
+
+                return true;
+            }
+            else {
+                throw new NonSupportVersionException('non support version. ->'.$version);
+            }
         }
-        return false;
+        else {
+            throw new NonSupportVersionException('version not found!');
+        }
     }
 
     /**
@@ -129,8 +104,7 @@ class Sim_Analyser extends Sve_Reader{
     private function read_stations() {
         $tiles = $this->get_map_tiles();
         if ($this->planquadrat_count > $tiles){
-            Log::error("tile count over!");
-            exit;
+             throw new Exception('tile count over!');
         }
 
         // split ground_t
@@ -153,13 +127,11 @@ class Sim_Analyser extends Sve_Reader{
                             'coordinates' => [$coordinate],
                             'player'      => intval($this->trim($lines[$i+4])),
                         ]);
-                        Log::info("station found -> {$name}", true);
                     }
                 }
             }
         }
         $this->planquadrat_count++;
-        // echo "\rReading tile info {$this->planquadrat_count} / {$tiles}";
     }
 
     /**
@@ -169,7 +141,6 @@ class Sim_Analyser extends Sve_Reader{
         $coordinates = $this->get_coordinates_from_str($this->get_children_str());
 
         if(!$this->resolve_relations($coordinates)){
-            Log::error('cannot resolved!');
         }
     }
 
@@ -203,13 +174,13 @@ class Sim_Analyser extends Sve_Reader{
      */
     private function resolve_relations($coordinates) {
         foreach ($coordinates as $coordinate) {
-            if($station = $this->get_station_by_coordinate($coordinate)) {
-                Log::info('station relation resolved. ->'.$station['name'], true);
+            if($station = $this->get_station_by_coordinate($coordinate, 'skip_resolved')) {
                 $station['coordinates'] = $coordinates;
                 $this->set_station_by_coordinate($coordinate, $station);
                 return true;
             }
         }
+        return false;
     }
 
     /**
@@ -258,10 +229,8 @@ class Sim_Analyser extends Sve_Reader{
                     'player_id'   => count($this->players),
                     'coordinates' => $this->get_coordinates_from_str($lines_str),
                 ]);
-                Log::info('Line found -> '.$name, true);
             }
         }
-
     }
 
 
@@ -294,138 +263,21 @@ class Sim_Analyser extends Sve_Reader{
         return $str;
     }
 
-
     /**
-     * 取得データを配列でまとめて返す
-     * @return array
+     * セーブバージョンが対応しているか
+     * @param string $version
+     * @return bool
      */
-    public function get_data_by_array() {
-        $app = [
-            'author'  => '128Na',
-            'web'     => 'http://simutrans128.blog26.fc2.com',
-            'version' => $this->get_app(),
-            'source'  => 'https://github.com/128na/sim_analyser',
-        ];
-
-        $info = [
-            'version' => $this->get_version(),
-            'pak'     => $this->get_pak(),
-            'size'    => $this->get_map_x() . 'x' . $this->get_map_y(),
-            'map_no'  => $this->get_map_no(),
-        ];
-
-        return [
-            'application' => $app,
-            'info'        => $info,
-            'players'     => $this->get_players(),
-            'stations'    => $this->get_stations(),
-            'lines'       => $this->get_lines(),
-            'way_types'   => $this->get_way_types(),
-        ];
-    }
-
-    /**
-     * 取得データをjson文字列でまとめて返す
-     * @return string
-     */
-    public function get_data_by_json() {
-        return json_encode($this->get_data_by_array());
-    }
-
-    /**
-     * 取得データをcsv文字列でまとめて返す
-    @return string
-     */
-    public function get_data_by_csv() {
-        $result = ["generate by {$this->get_app()}"];
-        $result[] = "player,way_type,line,stations";
-
-        foreach ($this->get_lines() as $line) {
-            $player = $this->get_player_by_id($line['player_id']);
-            $way_type = $this->get_way_type_by_id($line['way_type_id']);
-            $name = $line['name'];
-            $stations = implode(',',$this->find_stations_by_coordinates($line['coordinates']));
-
-            $result[] = "{$player},{$way_type},{$name},{$stations}";
+    private function check_version($version)
+    {
+        // xxx.xxx.xxx
+        $s = static::SUPPORT_SVE_VERSION_HIGHER;
+        $v = explode('.', $version);
+        if($v[1] >= $s[1]){
+            return true;
         }
-        return implode("\n", $result);
+        return false;
     }
 
-    /**
-     * 座標配列を駅名を探し、駅名の配列を返す。
-     * @param array $coordinates
-     * @return array
-     */
-    private function find_stations_by_coordinates($coordinates) {
-        $result = [];
-        foreach ($coordinates as $coordinate) {
-            $sta = $this->get_station_by_coordinate($coordinate);
-            $result[] = $sta ? $sta['name'] : 'no-name';
-        }
-        return $result;
-    }
-
-    /**
-     * アプリ情報を返す
-     * @return string
-     */
-    public function get_app(){
-        return static::APP_NAME .' ver'. static::APP_VERSION;
-    }
-
-    public function get_way_types(){return static::WAY_TYPES;}
-    public function get_way_type_by_id($id){return static::WAY_TYPES[$id];}
-    public function get_version(){return $this->version;}
-    public function get_pak(){return $this->pak;}
-    public function get_map_no(){return $this->map_no;}
-    public function get_map_x(){return $this->map_x;}
-    public function get_map_y(){return $this->map_y;}
-    public function get_map_tiles(){return $this->map_tiles;}
-    public function get_stations(){return $this->stations;}
-    public function get_station_by_id($id){return $this->stations[$id];}
-    public function get_station_by_coordinate($c){
-        foreach ($this->get_stations() as $s) {
-            foreach ($s['coordinates'] as $p) {
-                if(
-                    $p['x'] === $c['x'] &&
-                    $p['y'] === $c['y'] &&
-                    $p['z'] === $c['z']
-                ) {
-                    return $s;
-                }
-            }
-        }
-    }
-    public function get_lines(){return $this->lines;}
-    public function get_players(){return $this->players;}
-    public function get_player_by_id($id){return $this->players[$id];}
-
-
-    public function set_map_x($x){$this->map_x = intval($x);}
-    public function set_map_y($y){$this->map_y = intval($y);}
-    public function set_map_no($no){$this->map_no = intval($no);}
-    public function set_map_tiles($tiles){$this->map_tiles = intval($tiles);}
-    public function set_version($version){$this->version = $version;}
-    public function set_pak($pak){$this->pak = $pak;}
-    public function set_station_by_id($id, $s){
-        $this->stations[$id] = $s;
-    }
-    public function set_station_by_coordinate($c, $s){
-        foreach ($this->get_stations() as $id => $station) {
-            foreach ($station['coordinates'] as $p) {
-                if(
-                    $p['x'] === $c['x'] &&
-                    $p['y'] === $c['y'] &&
-                    $p['z'] === $c['z']
-                ) {
-                    $this->set_station_by_id($id, $s);
-                }
-            }
-        }
-    }
-
-    public function add_station($s){$this->stations[] = $s;}
-    public function add_player($player){$this->players[] = $player;}
-    public function add_line($line){$this->lines[] = $line;}
 }
 

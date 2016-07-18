@@ -6,44 +6,48 @@
  * @since   PHP5.6
  * @license WTFPL (http://www.wtfpl.net/txt/copying/)
  */
-class Sve_Reader {
+class Sve_Reader extends Sim_Analyser_Api{
     private $file;
     private $reader;
     public function __construct($filename){
-        $this->open_file($filename);
+        $this->open($filename);
     }
 
     public function __destruct() {
-        $this->close_file();
+        $this->close();
     }
 
-    protected function close_file(){
-        if (is_resource($this->file)) {
+    protected function close(){
+        $this->get_reader()->close();
+        if(is_resource($this->file)) {
             fclose($this->file);
         }
     }
 
-    private function open_file($filename, $format = null) {
+
+    private function open($filename) {
 
         $mime = mime_content_type($filename);
         switch ($mime) {
             case 'application/x-bzip2':
-                Log::info('detect bz2 format.');
+                if (!$this->bz_installed()) {
+                    throw new RuntimeException('need bz2 support!');
+                }
                 $this->decompress_bz2($filename);
                 break;
 
             case 'application/x-gzip':
-                Log::info('detect gz(zipped) format.');
+                if (!$this->gz_installed()) {
+                    throw new RuntimeException('need zlib support');
+                }
                 $this->decompress_gz($filename);
                 break;
 
             case 'application/xml':
-                Log::info('detect raw xml format.');
                 break;
 
             default :
-                Log::error('non support format! -> '.$mime);
-                exit;
+                 throw new NonSupportVersionException();
         }
 
         //既にファイルオープンで来ている場合→gz,bz2解凍された場合はポインタを先頭へ戻す。
@@ -57,13 +61,16 @@ class Sve_Reader {
         $this->init_xml();
     }
 
+    /**
+     * @param string $filename
+     * @return bool
+     */
     private function decompress_gz($filename) {
         $file_from = gzopen($filename, 'r');
 
         if (is_resource($file_from) ) {
             $file_to = tmpfile();
 
-            Log::info('extract sve file...', true);
             while (!gzeof($file_from)) {
                 fwrite($file_to, gzread($file_from, 8192));
             }
@@ -72,15 +79,19 @@ class Sve_Reader {
             gzclose($file_from);
             return true;
         }
+        return false;
     }
 
+    /**
+     * @param string $filename
+     * @return bool
+     */
     private function decompress_bz2($filename){
         $file_from = bzopen($filename, 'r');
 
         if (is_resource($file_from)) {
             $file_to = tmpfile();
 
-            Log::info('extract sve file...', true);
             while ($data = bzread($file_from, 8192)) {
                 fwrite($file_to, $data);
             }
@@ -89,13 +100,19 @@ class Sve_Reader {
             gzclose($file_from);
             return true;
         }
+        return false;
     }
 
 
+    protected function bz_installed() {
+        return function_exists('bzopen');
+    }
+    protected function gz_installed() {
+        return function_exists('gzopen');
+    }
 
     private function init_xml(){
         $filename = stream_get_meta_data($this->file)['uri'];
-        Log::info('open xml file -> '.$filename);
         $this->reader = new XMLReader();
         $this->reader->open($filename);
     }
@@ -182,7 +199,7 @@ class Sve_Reader {
      * @return string XML string
      */
     protected function get_children_str() {
-        return $this->get_reader()->readInnerXML();
+        return $this->get_reader()->readInnerXml();
     }
 
 }

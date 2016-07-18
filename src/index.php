@@ -3,6 +3,8 @@ define('DS', DIRECTORY_SEPARATOR);
 
 require_once 'lib/args.php';
 require_once 'lib/log.php';
+require_once 'sim_exceptions.php';
+require_once 'Sim_Analyser_Api.php';
 require_once 'Sve_Reader.php';
 require_once 'Sim_Analyser.php';
 
@@ -33,8 +35,9 @@ EOD;
 $analyser = new Sim_Analyser($file);
 
 Log::info($analyser->get_app(), true);
-
+Log::info('execute analyser', true);
 $analyser->execute();
+Log::info('executed', true);
 
 
 //出力形式・ファイル名の指定
